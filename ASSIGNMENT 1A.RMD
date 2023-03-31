@@ -1,0 +1,58 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+Project 2: Decision making based on historical data
+Attached Files:
+File I_1.jpeg (49.983 KB)
+File I_2.jpeg (48.819 KB)
+File dataG2.csv (149.28 KB)
+This project reflects the basics of data distribution. The project topics relate to the definitions of variance and skewness.
+Files needed for the project are attached.
+Cover in the project the following: 
+Explain the variance and skewness
+#Variance is a measure of the spread between numbers in a data set. It is calculated by taking the average of the squared differences from the mean. A higher variance indicates that the data is spread out over a wider range, while a lower variance indicates that the data is clustered closer to the mean.
+# Skewness is a measure of the asymmetry of a distribution
+
+Show a simple example of how to calculate skewness and then explain the meaning of it.
+```{r}
+#Show a simple example of how to calculate variance and then explain the meaning of it.
+# suppose we have the following data and we need to calculate variance
+data<-c(25,45,33,44,22,30)
+# The variance can be calculated as follows
+var(data)
+# Show a simple example of how to calculate skewness and then explain the meaning of it
+library(PerformanceAnalytics)
+skewness(data)
+# since skewness is between -0.5 and 0.5, the distribution is approximately symmetric.
+```
+  
+After loading dataG2.csv into R (or software of your choice), explain the meaning of each column or what the attributes explain.
+```{r}
+# Loading the data set
+dataG2<-read.csv("D:\\TASKS\\rstudio tasks\\carl\\dataG2.csv")
+# Obtaining the structure of the data
+str(dataG2)
+```
+Columns are for skewness, median, mean, standard deviation, and the last price (each row describes with the numbers the distribution of the stock prices): 
+Draw your own conclusions based on what you learned under 1. and 2.
+Explain the meaning of variables 'I_1' and 'I_2' after you execute (after dataG2.csv is loaded in R or Octave) 
+```{r}
+imported_data <- dataG2
+S=imported_data[,5]-imported_data[,3]  
+I_1 =which.min(S) # use figure I_1 (see attached)
+I_1
+I_2 = which.max(S) # use figure I_2 (see attached)
+I_2
+```
+#Values I_1 and I_2 indicates the deviations of the last price from the average prices. Since both they are positive it indicates that the last prices are higher than the mean prices. This indicates that one should sell that stock.
+
+Based on the results in a., which row (stock) would you buy and sell and why (if you believe history repeats)? 
+# One should sell the overpriced stocks and buy the underpriced stocks thus maximising the profit.
+Explain how would you use the skewness (first column attribute) to decide about buying or selling a stock. 
+#Skewness can be used to identify overpriced or under priced stocks by analyzing historical data and comparing them with the data at hand.stocks with  positive skewness indicates that the stocks have a tendency to have more positive returns while stocks with negative skewness indicates that the stocks have a tendency to have ,ore negative returns..
+
+If you want to decide, based on the historical data, which row (stock) to buy or sell, would you base your decision on skewness attribute (1st column) or the differences between the last prices with mean (differences between 5th attribute and 3rd attribute)? Explain.
+
+# Since we are basing on the historical data, the differences between the last prices with mean could serve better here. This is because it provides a very useful insight of whether the underlying asset is overvalued or undervalued.If the stock is overvalued, it means the investor should sell. If it is under valued it means the investor should buy.

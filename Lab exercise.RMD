@@ -1,0 +1,160 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+. (20 points) [R Primer] Answer the following questions on the usedcars.csv dataset, which 
+contains actual data about used cars advertised for sale.
+a) Create a variable to store the usedcars.csv file.
+```{R}
+USED_CARS<-read.csv("usedcars.csv")
+```
+b) Show the structure of used car data.
+```{r}
+str(USED_CARS)
+```
+c) Summarize two features, price and mileage, simultaneously.
+```{r}
+summary(USED_CARS$price)
+summary(USED_CARS$mileage)
+```
+d) Calculate the median price.
+```{r}
+median(USED_CARS$price)
+
+```
+e) Calculate the 10th and 90th percentiles. [Hint: quantile()]
+```{r}
+
+quantile(USED_CARS$price,probs = c(0.1,0.9))
+```
+f) Draw a boxplot of the used car price and mileage, respectively. Interpret each box 
+plot.
+```{r}
+library(ggplot2)
+ggplot(USED_CARS,aes(price))+geom_boxplot(col="purple")+ggtitle("Boxplot of the used car price")
+# The values of price are skewed to the left
+ggplot(USED_CARS,aes(mileage))+geom_boxplot(col="yellow")+ggtitle("Boxplot of the used car mileage")
+# The values of mileage are skewed to the right.
+```
+g) Draw a histogram of used car prices and mileage, respectively. Interpret each box 
+plot.
+```{r}
+ggplot(USED_CARS,aes(price))+geom_histogram(col="purple",bins = 30)+ggtitle("Histogram of the used car price")
+# Price values are densely at the center.
+ggplot(USED_CARS,aes(mileage))+geom_histogram(col="yellow",bins = 20)+ggtitle("Histogram of the used car mileage")
+# Most values of the mileage are on the left.
+```
+h) What are the variance and standard deviation on price and mileage variables?
+```{r}
+# Variance and sd of price
+var(USED_CARS$price)
+sd(USED_CARS$mileage)
+# Variance and sd of mileage
+var(USED_CARS$mileage)
+sd(USED_CARS$mileage)
+```
+i) Run table() on year, model, and color variable, respectively. Interpret each result.
+```{r}
+table(USED_CARS$year)
+# Most observations were observed in the year 2010, while the least were observed in the years 2001, 2002, 2003, and 2012
+table(USED_CARS$model)
+# 49 cars of model ses were observed, 23 of model sel and 78 of model se.
+
+table(USED_CARS$color)
+# Most used cars were of color black while the least were of color Gold
+```
+j) Create a new variable (i.e., usedcars$conservative) that indicates conservative 
+colors as TRUE or FALSE.
+```{r}
+USED_CARS$conservative<-c(TRUE,FALSE)
+
+```  
+  Divide nine colors into two groups (conservative colors: Black, Gray, Silver, and 
+White; nonconservative colors: Blue, Gold, Green, Red, and Yellow) and use %in% 
+operator.
+```{r}
+library(dplyr)
+USED_CARS$conservative<-ifelse(USED_CARS$color%in% c("Black" , "Gray" , "Silver" ,
+"White"),TRUE,FALSE)
+# First six rowws of the data
+head(USED_CARS)
+
+```
+
+2. (20 points)
+[Linear Regression]
+Perform a linear regression which predicts an O-ring 
+failure under a launch temperature from the space shuttle Challenger data (challenger.csv).
+Note that "distress_ct" feature in the challenger CSV file means O-ring failure (i.e., O-ring 
+distress events). "0" is No O-ring distress event; "1" is one O-ring distress event; "2" is two 
+O-ring distress events.
+Please complete the steps: 
+```{r}
+challenger<-read.csv("challenger.csv")
+str(challenger)
+```
+a) Draw a scatterplot to understand the relationship between O-ring failures and 
+temperature and analyze their relationship with your own words.
+```{r}
+ggplot(challenger,aes(distress_ct,temperature))+geom_smooth()+geom_point()+ggtitle("relationship between O-ring failures and 
+temperature")
+# There is negative linear relationship between the 2 variables since in the plot.
+
+```
+b) Calculate the optimal estimate of � and � in the linear form � = � + ��.
+[Check (a) in Note; Hint: cov(), var(), and mean()]
+```{r}
+attach(challenger)
+cov<-cov(distress_ct,temperature)
+var_temp<-var(temperature)
+mean_temp<-mean(temperature)
+mean_dis<-mean(distress_ct)
+estimate_b<-cov/var_temp
+estimate_b
+
+
+estimate_a<-mean_dis - estimate_b*mean_temp
+estimate_a
+```
+c) Build a linear regression model and show the result summaries of the model (e.g.,
+median, etc.)
+```{r}
+model<-lm(distress_ct~temperature,data = challenger)
+summary(model)
+
+```
+d) What is the expected O-ring failure given a temperature is 55 or 75 degrees in your 
+model?
+```{r}
+dat1<-data.frame(temperature=55)
+predict(model,dat1)
+dat2<-data.frame(temperature=75)
+predict(model,dat2)
+
+```
+e) What is the correlation between two variables (Use Pearson’s correlation 
+coefficient; Check (b) in Note)? [Hint: Use cor()]
+```{r}
+cor.test(distress_ct,temperature)
+
+```
+
+
+
+
+
+3. (10 points) [Linear Regression] Please solve the question using simple linear regression
+The age and vitamine C rate dataset is given (i.e., age_vitaminC_rate.csv), What is an 
+expected Vitamin C rate given an age is 16? [Hint: Review an example 1: Predict a fall 
+college enrollment on a year's unemployment rate]
+```{r}
+age_vitamin_data<-read.csv("age_vitaminC_rate.csv")
+# Structure of the data
+str(age_vitamin_data)
+Model1<-lm(VitaminC~Age, data = age_vitamin_data)
+summary(Model1)
+# Predictions
+new_data<-data.frame(Age=16)
+predict(Model1,new_data)
+```

@@ -1,0 +1,45 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+Data cleaning is a very important process in data analysis. It involves correcting all errors present in our data set, ommitting missing values and duplicate values and correcting data types.
+
+Loading the titanic data into Rstudio intergrated environment.
+```{r}
+library(readxl)
+Titanic_data<-read_excel("~\\Week_04_HW4_Titanic_Data.xls")
+str(Titanic_data)
+# The titanic data set contains 1309 observation of different data types.
+# REMOVING MISSING VALUES
+# Checking if our data set contains missing values
+sum(is.na(Titanic_data))
+# Titanic data set contains 2103 missing observations.
+# missing values based on the columns
+colSums(is.na(Titanic_data))
+# Ommiting missing values
+na.omit(Titanic_data)->Titanic_data1
+# After omiting the missing values, Titanic_data1 data set contains 180 observations of 12 variables.
+
+
+## checking and removing duplicates in our data set
+library(dplyr)
+Titanic_data1_unique<-Titanic_data1%>%distinct()
+# Titanic_data1_unique contains 0 duplicate values.
+str(Titanic_data1_unique)
+```
+
+Once the data is clean one can go on and visualize the data.
+```{r}
+library(ggplot2)
+# people that traveled in first class
+table(Titanic_data1_unique$`Passenger Class`)
+ggplot(data=Titanic_data1_unique,mapping=aes(`Passenger Class`,col=Sex   ))+geom_bar()+ggtitle("Distribution of passenger class")
+# Distribution of gender in the data set
+table(Titanic_data1_unique$Sex)
+table(Titanic_data1_unique$Survived)
+# this shows that only 1 person didn't survive. We can use a chart to proof this
+ggplot(data=Titanic_data1_unique,mapping=aes(Age  ,fill=Survived))+geom_histogram(bins = 10)+ggtitle("An histogram to show survival based on the age. ")
+ggplot(data=Titanic_data1_unique,mapping=aes(Age  ,fill= `Passenger Class`  ))+geom_histogram(bins = 10)+ggtitle("An histogram to show passenger class based on the age. ")
+ggplot(data=Titanic_data1_unique,mapping=aes(`Passenger Class`   ))+geom_bar()
+```

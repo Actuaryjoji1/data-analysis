@@ -1,0 +1,49 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+Maternal Health Risk Data
+Data has been collected from different hospitals, community clinics, maternal health cares through the IoT based risk monitoring system.
+Age: Age in years when a woman is pregnant.
+SystolicBP: Upper value of Blood Pressure in mmHg, another significant attribute during pregnancy.
+DiastolicBP: Lower value of Blood Pressure in mmHg, another significant attribute during pregnancy.
+BS: Blood glucose levels is in terms of a molar concentration, mmol/L.
+HeartRate: A normal resting heart rate in beats per minute.
+Risk Level: Predicted Risk Intensity Level during pregnancy considering the previous attribute
+```{r}
+maternal_data<-read.csv("Maternal Health Risk Data Set.csv")
+str(maternal_data)
+# Correcting the data type of Risk level to factor
+maternal_data$RiskLevel<-as.factor(maternal_data$RiskLevel)
+# Checking if the data contains missing data.
+colSums(is.na(maternal_data))
+# Our data set contains no missing observations.
+table(maternal_data$RiskLevel)
+# There are 3 risk levels females can have during pregnancy. High, mid and low risk levels. I need to design a decision tree model that will help in the classification of the risk intensity levels of pregnant females based on the available data.
+```
+ Using supervised learning on maternal data set to classify the  Risk Intensity Levels of pregnant mothers based on the parameters in the function.
+```{r}
+sample<-sample(1:nrow(maternal_data),size=0.7*nrow(maternal_data))
+train_data<-maternal_data[sample,]
+test_data<-maternal_data[-sample,]
+library(randomForest)
+library(caret)
+rf_model<-randomForest(RiskLevel~.,data = train_data,proximity=T)
+print(rf_model)
+# The train data set model accuracy is 83.51%
+test1<-predict(rf_model,test_data)
+confusionMatrix(test1,test_data$RiskLevel)
+# The test data set model accuracy is 85.57%
+plot(rf_model)
+# The plot above is used to show how the 3 risk intensity levels are distributed. 
+# The plot above shows the distribution of risk intensity levels.
+
+```
+Conclusion
+The classification model above is of good fit. It has an average accuracy of 84.5%. it can be used in hospitals to classify whether pregnant mothers can be classified in high, medium, and low risk intensity levels.
+
+
+
+
+

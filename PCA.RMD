@@ -1,0 +1,174 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+loading the data into Rstudio
+```{r}
+dat<-read.csv("MLData2023.csv")
+library(tidyverse)
+# Separate samples of non-malicious and malicious events
+dat.class0 <- dat %>% filter(Class == 0) # non-malicious
+dat.class1 <- dat %>% filter(Class == 1) # malicious
+# Randomly select 300 samples from each class, then combine them to form a working dataset
+set.seed(1234567)
+rand.class0 <- dat.class0[sample(1:nrow(dat.class0), size = 300, replace = FALSE),]
+rand.class1 <- dat.class1[sample(1:nrow(dat.class1), size = 300, replace = FALSE),]
+# Your sub-sample of 600 observations
+mydata <- rbind(rand.class0, rand.class1)
+dim(mydata) # Check the dimension of your sub-sample
+str(mydata)
+table(mydata$Connection.State)
+table(mydata$Operating.System)
+table(mydata$IPV6.Traffic)
+table(mydata$Ingress.Router)
+```
+The data types of connection states, operating systems, and IPV6.traffic  are wrong, i have to change them into factors.
+Data type of variable class need to be changed into logical data type.
+```{r}
+mydata$Connection.State<-as.factor(mydata$Connection.State)
+mydata$IPV6.Traffic<-as.factor(mydata$IPV6.Traffic)
+mydata$Operating.System<-as.factor(mydata$Operating.System)
+mydata$Ingress.Router<-as.factor(mydata$Ingress.Router)
+mydata$Class<-factor(mydata$Class)
+str(mydata)
+```
+Part 1
+Section 1
+A table for categorical and binary variables. 
+
+```{r}
+library(plyr)
+p<-ldply(mydata[,c(3,6,7,9,14)],function(o) t(rbind(names(table(o)),table(o),paste0(prop.table(table(o))*100,"%"))))
+colnames(p)<-c("Categorical feature","Feature","count","N %")
+# Rounding to 1 decimal place
+ b<-c("25.7%","9.2%","65.2%","37.3%","9.3%","0.2%","42.5%","0.2%","10.5%","70.2%","25.5%","2%","2.3%","58.7%","41.3%","50%","50%")
+cbind(p,b)->p
+table<-p[,-4]
+colnames(table)<-c("Categorical feature","Feature","count","N %")
+table
+```
+Section 2
+summary of the Numerical variables.
+```{r}
+library(psych)
+tab2<-describe(mydata[,c(1,2,4,5,8,10,11,12,13)])
+tab2<-as.data.frame(tab2)
+round(tab2,digits = 2)->tab2
+tab3<-tab2[,c(5,8,9,11)]
+tab3
+```
+Section 3
+Based on section 1 above, IPV6.Traffic feature contains some invalid features.
+```{r}
+library(scales)
+library(ggplot2)
+ggplot(mydata,aes(Assembled.Payload.Size))+geom_boxplot()+ggtitle("Boxplot of Assembled.Payload.Size")
+ggplot(mydata,aes(DYNRiskA.Score))+geom_boxplot()+ggtitle("Boxplot of DYNRiskA.Score")
+a<-boxplot.stats(mydata$DYNRiskA.Score)$out
+a
+# DYNRiskA.Score contains 7 outliers.
+percent(7/600)
+ggplot(mydata,aes(Response.Size))+geom_boxplot()+ggtitle("Boxplot of Response.Size")
+a1<-boxplot.stats(mydata$Response.Size)$out
+a1
+# Response.Size contains 1 outliers.
+percent(1/600)
+ggplot(mydata,aes(Source.Ping.Time))+geom_boxplot()+ggtitle("Boxplot of Source.Ping.Time")
+a2<-boxplot.stats(mydata$Source.Ping.Time)$out
+a2
+#Source.Ping.Time contains 4 outliers.
+percent(4/600)
+ggplot(mydata,aes(Connection.Rate))+geom_boxplot()+ggtitle("Boxplot of Connection.Rate")
+a3<-boxplot.stats(mydata$Connection.Rate)$out
+percent(12/600)
+a3
+#Connection.Rate contains 12 outliers.
+ggplot(mydata,aes(Server.Response.Packet.Time))+geom_boxplot()+ggtitle("Boxplot of Server.Response.Packet.Time")
+ggplot(mydata,aes(Packet.Size))+geom_boxplot()+ggtitle("Boxplot of Packet.Size")
+a4<-boxplot.stats(mydata$Packet.Size)$out
+a4
+# Packet.Size contains 4 outliers.
+percent(4/600)
+ggplot(mydata,aes(Packet.TTL))+geom_boxplot()+ggtitle("Boxplot of Packet.TTL")
+
+a5<-boxplot.stats(mydata$Packet.TTL)$out
+a5
+# Packet.TTL contains 4 outliers.
+percent(4/600)
+ggplot(mydata,aes(Source.IP.Concurrent.Connection))+geom_boxplot()+ggtitle("Boxplot of Source.IP.Concurrent.Connection")
+# From the above plots, variables DYNRiskA.Score,Response.Size,Source.Ping.Time,Connection.Rate, Packet.Size, and  Packet.TTL contains outliers.
+```
+
+Part 2
+Section 1
+Replacing outliers with NAs
+```{r}
+mydata[mydata$DYNRiskA.Score %in% a,"DYNRiskA.Score" ]=NA
+mydata[mydata$Response.Size %in% a1,"Response.Size" ]=NA
+mydata[mydata$Source.Ping.Time %in% a2,"Source.Ping.Time" ]=NA
+mydata[mydata$Connection.Rate%in% a3,"Connection.Rate" ]=NA
+mydata[mydata$Packet.Size %in% a4,"Packet.Size" ]=NA
+mydata[mydata$Packet.TTL %in% a5,"Packet.TTL" ]=NA
+colSums(is.na(mydata))
+#Write to a csv file.
+write.csv(mydata,"mydata.csv") 
+```
+Section 2
+```{r}
+library(scatterplot3d) #3-D plot
+library(scales) #For more graphic scales options
+library(tidyverse)
+library(ggpubr)
+library(factoextra)
+mydata_numeric<-mydata[,c(1,2,4,5,8,10,11,12,13,14)]
+#filter the incomplete cases
+mydata_numeric_1<-na.omit(mydata_numeric)
+# Scatterplot matrix to show relationship of the data
+pairs(mydata_numeric_1[,-10],col=as.numeric(mydata_numeric_1$Class)+1)
+```
+
+PCA in R
+Scaling is an important step before performing principal component analysis because it prevents large variable values from swaying the data even with little variability.
+```{r}
+pca_mydata<-prcomp(mydata_numeric_1[,-10],scale. = T)
+# Summary of the data set
+summary(pca_mydata)
+#  Outline the individual and cumulative proportions of variance (3 decimal places) explained by each of the first 4 components.
+x1<-pca_mydata$sdev
+round(x1[1:4],digits = 3)
+#  Outline the coefficients (or loadings) to 3 decimal places for PC1, PC2 and PC3, and describe which features (based on the loadings) are the key drivers for each of these three PCs.
+loadings<-pca_mydata$rotation
+as.data.frame(loadings)->loadings
+loadings$PC1<-round(loadings$PC1,digits = 3)
+loadings$PC2<-round(loadings$PC2,digits = 3)
+loadings$PC3<-round(loadings$PC3,digits = 3)
+loadings[,1:3]
+library(stargazer)
+```
+Biplot for Pc1 and Pc2
+```{r}
+data1 <- data.frame(pca_mydata$x,Species=mydata_numeric_1$Class)
+ggplot(data1,aes(x=PC1,y=PC2))+geom_point(aes(colour=mydata_numeric_1$Class),alpha=0.8,size=4)+theme_minimal(base_size=14)+theme(legend.position = "top")+xlab("PC1")+ylab("PC2")+ ggtitle("Biplot of PC1 and PC2")
+plot(pca_mydata, type="l", main="Scree plot - Class")
+# The scree plot above indicates that 2 factors should suffice. It means that the dimension have reduced from 9 to 2. The first 2 components are considered the most significant. 2 components are required to explain at least 50% of variability in the data.
+fviz_pca_biplot(pca_mydata,axes = c(1,2),col.ind = mydata_numeric_1$Class,fill.ind = mydata_numeric_1$Class,legend.title=list(colour="Class",fill="Class",alpha="Class"),addEllipses = T)
+#Extract the eigenvalues and proportions explained
+varexp.class <- as.data.frame(summary(pca_mydata)$importance)
+varexp.class
+# PC1, PC2, PC3, and PC4 have the largest eigen values and the highest loading thus they can help in distinguishing malicious events. 
+```
+Based on the results from parts (iii) to (iv), describe which dimension (have to choose 
+one) can assist with the identification of Malicious events (Hint: project all the points in 
+the PCA plot to PC1 axis and see whether there is good separation between the points 
+for Malicious and Non-Malicious events. Then project to PC2 axis and see if there is 
+separation between Malicious and Non-Malicious events, and whether it is better than 
+the projection to PC1.
+```{r}
+# The best dimensions to choose is 2 since it lesser that the variables present in the data set used in the analysis.
+```
+
+
+
+
+

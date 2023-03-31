@@ -1,0 +1,22 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+Three of the principles will apply to design an histogram for the distribution of the prices of different houses and finding the relationship between the price and size of the house.The 3  good designs that i am going to use are innovative, useful, and understandable (Rams, 2017). By the use of the r programming software, i wish to design simple histograms and scatter plots that are easily understandable. This short paper will use the above 3 mentioned problems to solve the above problems.
+```{r}
+houses_data<-read.table("C:\\Users/User/OneDrive/Documents/houses data.txt",sep = "",header = T)
+str(houses_data)
+# our data set contains 100 observations of 7 variables of integer and numerical data types.
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(houses_data,aes(price))+geom_histogram(bins=10,col="purple")+ggtitle("Distribution of the price of houses")
+```
+Based on the above histogram, the prices of the houses are skewed to the right. This means that many people prefer cheap to expensive houses.Few people afford expensive houses thus more affordable houses are in demand.
+```{r}
+ggplot(data = houses_data,aes(size,price))+geom_point()+geom_smooth()+ggtitle("relationship between the price and size of houses")
+```
+There is a positive linear relationship between sizes and prices of houses.It is true to say that big sized houses are always expensive and small sized houses are cheap.

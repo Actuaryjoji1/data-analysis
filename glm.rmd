@@ -1,0 +1,50 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r}
+DATA<-read.table("D:\\TASKS\\rstudio tasks\\carl\\ScotsRaces.dat.txt",header = T)
+# First 6 rows of the data
+head(DATA)
+# Our data set contains 5 variables of diffrent data types.
+```
+
+
+
+Descriptive statistics of our data 
+```{r}
+# The summary function generates the mean, median, minimum and maximum values of the data set.
+summary(DATA[,-1])
+# Obtaining the standard deviation of the data
+apply(DATA[,-1],2,sd)
+# Obtaining the variance of the data
+apply(DATA[,-1],2,var)
+```
+Scatter plot Matrix of the data
+```{r}
+attach(DATA)
+plot(climb,distance,col="red",main = "Relationship between climb and distance")
+plot(timeW,timeM,col="purple",main = "Relationship between timeM andWtimeM")
+plot(timeW,distance,col="yellow",main = "Relationship between timeW and distance")
+plot(timeM,distance,col="green",main = "Relationship between timeM and distance")
+
+```
+Regression
+Simple Linear models
+```{r}
+model<-lm(timeM~distance)
+model
+# Obtaining the summary of our model
+summary(model)
+# Our Model is of good fit since the value Multiple R-squared (0.9273) is close to 1
+```
+Display a correlation Matrix showing the correlation matrix between each pair in the data set.
+```{r}
+# Correlation Matrix of our numerical variables ScotRaces in the data set
+pairs(ScotRaces[,-1])
+library(psych)
+# the pair.panel function is an extension of the pairs function that allows you to easily add regression lines, histograms, confidence intervals, … and customize several additional arguments
+pairs.panels(ScotRaces[,-1])
+```
