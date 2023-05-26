@@ -1,0 +1,159 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+Loading Data Into Rstudio
+Data is loaded by the use of the read.csv()function since the data is in csv format.
+```{r}
+salary_data<-read.csv("D:\\TASKS\\rstudio tasks\\peeter\\ds_salaries.csv")
+# Structure of the data
+str(salary_data)
+# The data set contains six hundred and seven 0observations of 12 variables of integer and character data types. The data types of experience level, salary currency, job title, employee residence and company size variables can be changed from characters to factors as follows.
+salary_data$experience_level<-as.factor(salary_data$experience_level)
+table(salary_data$experience_level)
+# There are 4 experience levels in the data set
+salary_data$employee_residence<-as.factor(salary_data$employee_residence)
+salary_data$salary_currency<-as.factor(salary_data$salary_currency)
+table(salary_data$salary_currency)
+salary_data$job_title<-as.factor(salary_data$job_title)
+salary_data$company_size<-as.factor(salary_data$company_size)
+table(salary_data$company_size)
+# The company sizes can either be small medium or large. It is true that in the salary data set medium companies are most while small are the least
+colSums(is.na(salary_data))
+# The salary data set is clean and contains no missing observation. 
+salary_data$remote_ratio<-as.factor(salary_data$remote_ratio)
+table(salary_data$remote_ratio)
+# There are 3 remote ratios, 0,50, and 100
+```
+Loading ggplot and cow plot packages
+```{r}
+library(ggplot2)
+library(cowplot)
+```
+
+A. Themes
+The cow plot package provides a variety of plot themes that covers a wide range of user cases.In addition, it also provides a variety of theme with different features.
+  1. Default ggplot theme
+```{r}
+options(scipen =999)
+a<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+ggtitle("Relaationship between salary and salary in USD")
+a
+```
+The scatter plot above shows the relationship between salary and salary in dollars. There is non-linear relationship between the 2 variables. It is seen from the graph that the large companies pay high salaries to their employees.
+  2. Classic Cow plot Theme
+  The Classic cow plot theme changes the font size and line size of the chart. It also removes the grids in the chart.
+```{r}
+options(scipen =999)
+b<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+ggtitle("Relaationship between salary and salary in USD")+theme_cowplot(font_size = 14,line_size = 1)
+b
+# insert_yaxis_grob() is a cowplot package function that allows you to add a custom y-axis grob (graphical object) to an existing plot. When you wish to add a secondary y-axis to a plot or change the appearance of the existing y-axis, this is beneficial.
+y_grob <- grid::linesGrob(x = unit(0, "npc"), y = unit(0, "npc"),gp = grid::gpar(col = "red"))
+# Insert the custom y-axis grob onto the plot
+p_grob <- insert_yaxis_grob(b, y_grob, position = "left")
+p_grob
+```
+  3. Minimal grid Theme
+  The minimal grid theme can provide either full grid, horizontal or vertical grid. it is similar to theme_minimal(), but there also exists some slight differences. One can also add a stamp plot on the graphs with labels good, bad or wrong.
+```{r}
+options(scipen =999)
+# A plot with a full grid showing a good stamp label. 
+r1<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+ggtitle("Relaationship between salary and salary in USD")+theme_minimal_grid(12)
+stamp_good(r1)
+# A Plot with vertical grid with a wrong stamb label.
+r2<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+ggtitle("Relaationship between salary and salary in USD")+theme_minimal_vgrid(line_size = 0.5,
+  rel_small = 12/14,rel_tiny = 11/14,rel_large = 16/14,color = "grey85")
+stamp_wrong(r2)
+#  A Plot with a horizontal grid with a bad stamb label
+r<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+ggtitle("Relaationship between salary and salary in USD")+theme_minimal_hgrid(line_size = 0.5,
+  rel_small = 12/14, rel_tiny = 11/14, rel_large = 16/14, color = "red")
+stamp_bad(r)
+```
+  4. Minimal horizontal grid theme
+  This theme displays the grids horizontally. The figure below shows a density polygon of distribution of salaries. 
+```{r}
+# A plot showing Distribution of salary with horizontal grids.Horizontal grid lines are useful for easily viewing the vertical position within a volume. Lines can be displayed on a regular sequence or at specific values
+ggplot(data=salary_data,aes(salary,col=company_size))+ggtitle("Distribution of Salary")+geom_density(alpha = 1.5) +
+  scale_y_continuous(expand = expansion(mult = c(1, 1.05))) +theme_minimal_hgrid(12)+background_grid( major = c("xy", "x", "y", "only_minor", "none"),
+  minor = c("none", "xy", "x", "y"),size.major = 0.5, size.minor = 0.2,color.major = "grey",color.minor = "green")
+```
+  5. Half_open_Theme
+  A plot with half open theme to display the company sizes.
+```{r}
+# Panel_border function provides a simple way to modify the panel border in ggplot2. Chart borders are very essential and should be added on charts.
+ggplot(data=salary_data,aes(company_size))+ggtitle("Company sizes")+ geom_bar(fill = "#56B4E9", alpha = 0.8) +theme_half_open()+panel_border(color = "yellow",size=1,linetype = 1)
+```
+  
+B. Arranging Multiple plots in a grid using Cow plot Package.
+Cow plot package is mostly used in arranging multiple plots in a grid. This is possible by the use of the function plot.grid(p1,p2,p3,...pn), where pis denotes the plots. The Plot_grid function makes it possible to name graphs an dplots.
+```{r}
+p1<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+ggtitle("Relaationship btn salary and salary in USD")
+p2<-ggplot(data = salary_data,aes(salary,fill=company_size))+geom_histogram(bins=10)
+p3<-ggplot(data = salary_data,aes(salary,fill=experience_level))+geom_histogram(bins=10)
+p4<-ggplot(data = salary_data,aes(salary,fill=remote_ratio))+geom_histogram(bins=10)
+# 2*2 grid of four plots. The first 2 plots are in the first row while the rest in the second row. The plot shows the distribution of salary based on the company size, experience level and remote ratio.
+multiple_plot<-plot_grid(p1,p2,p3,p4,labels = "auto")
+multiple_plot
+
+# Arranging the last 2 plots in columns. This makes comparison easier. 
+plot_grid(p3,p4, labels = "AUTO",ncol = 1)
+
+# Adjusting the heights of rows and columns.
+plot_grid(p1,p2,p3,p4, rel_widths = c(2,1,1,4),rel_heights = c(2,1,3,1))
+
+# Nested Plot grids. Generating plots that ain't a simple grid
+p5<-ggplot(data = salary_data,aes(salary,fill=remote_ratio))+geom_histogram(bins=10)+facet_wrap(~company_size)
+bottom_row <- plot_grid(p2, p3, labels = c('B', 'C'), label_size = 12)
+plot_grid(p5, bottom_row, labels = c('A', ''), label_size = 12, ncol = 1)
+
+# gtable is designed to help construct and manipulate layouts containing graphical elements. One can first generate points of a chart, then generate a plot using the already generated points using cowplot package.
+# Generating points of a plot
+plot<-ggplot(data=salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point(fill="yellow")
+plot_table<-as_gtable(plot)
+plot_table
+# combining the points to generate a chart
+plot_grid(plot_table)
+
+# Obtaining the plot components names. This function obtains all names of the components used in generating a plot
+plot_component_names(plot)
+
+```
+c. Generic plot annotations
+The cow plot package helps a user to capture plots as images and also add images on plots.
+```{r}
+w<-ggplot(data = salary_data,aes(salary,salary_in_usd,col=company_size))+geom_point()+theme_cowplot(15)
+logo_file <- system.file("extdata", "logo.png", package = "cowplot")
+ggdraw(plot = w)+  draw_image(logo_file, x = 1, y = 1, hjust = 1, vjust = 1, width = 0.13, height = 0.2,scale=1.5)
+# In the plot above, cow plot logo is inserted, this helps a user to know that a plot is generated by the cowplot package. The size of logo can be adjusted using the scale function in draw_image function. One can set the size of the logo according to his or her own preference. 
+
+ggdraw(w)+draw_label("draft",color = "#C0A0A0", size = 100, angle = 45)
+# The plot above shows annotations in the plot. It shows that the plot above is a draft. For the annotation to be seen it is a must have a background theme. The angle is adjusted depending on the users preference.
+
+# Combining Plots and Images
+library(forcats)
+library(dplyr)
+library(PASWR)
+library(magick)
+cow_image <- system.file("extdata", "cow.jpg", package = "cowplot") %>%
+  image_read() %>%
+  image_resize("570x380") %>%
+  image_colorize(35, "green")
+# A density plot to represent the butterfat production of different breeds of cows.
+X<-Cows %>% filter(breed != "Canadian") %>%
+  mutate(breed = fct_reorder(breed, butterfat)) %>%ggplot(aes(butterfat, fill = breed)) +
+  geom_density(alpha = 0.7) +scale_fill_grey() +coord_cartesian(expand = FALSE) +
+  theme_minimal_hgrid(11, color = "red")
+ggdraw() + draw_image(cow_image) + draw_plot(X)
+# In the chart above, a cow background is inserted. From the background a user can be able to tell that the plot contains information of cows.
+```
+
+
+d Saving plots
+The save_plot() replaces the ggsave() in the ggplot package. It is better in that it uses default sizes that work the best with cowplot themes and it make sit easy to adjust the aspect ratio of a chart.
+```{r}
+file1<-tempfile("file1", fileext = ".png")
+save_plot(file1,X,ncol = 2, base_asp = 1.1)
+# The location of the plot
+file1
+```
+
