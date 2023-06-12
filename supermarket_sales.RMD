@@ -1,0 +1,80 @@
+Loading the data set into Rstudio
+```{r}
+supermarket_data<-read.csv("D:\\TASKS\\rstudio tasks\\charan Shiva\\SampleSuperstore.csv")
+# Structure of the data set
+str(supermarket_data)
+```
+
+Data cleaning and preparation
+```{r}
+# changing the data types of variables
+supermarket_data$Ship.Mode<-as.factor(supermarket_data$Ship.Mode)
+supermarket_data$Region<-as.factor(supermarket_data$Region)
+supermarket_data$Category<-as.factor(supermarket_data$Category)
+# Checking missing values
+colSums(is.na(supermarket_data))
+# Checking duplicates
+x<-duplicated(supermarket_data)
+# checking the presence of outliers in profit
+library(ggplot2)
+ggplot(data=supermarket_data,aes(Profit))+geom_boxplot(col="pink")+ggtitle("Distribution of Profit")+theme_dark()
+# Ommiting outliers
+Q1 <- quantile(supermarket_data$Profit, 0.25, na.rm = TRUE)
+Q3 <- quantile(supermarket_data$Profit, 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+lower <- Q1 - 1.5 * IQR
+upper <- Q3 + 1.5 * IQR
+outliers <-supermarket_data$Profit < lower | supermarket_data$Profit > upper
+supermarket_data$Profit[outliers] <- NA
+supermarket_data <- supermarket_data[!outliers, ]
+
+```
+
+Exploratory data Analysis
+```{r}
+# Descriptive statistics of the numerical and integer variables.
+library(tidyverse)
+supermarket_data %>% select(Sales,Quantity,Discount,Profit) %>% summary()
+var(supermarket_data$Profit)
+var(supermarket_data$Quantity)
+var(supermarket_data$Discount)
+var(supermarket_data$Sales)
+# totals 
+sum(supermarket_data$Profit)
+sum(supermarket_data$Quantity)
+sum(supermarket_data$Discount)
+sum(supermarket_data$Sales)
+sum(supermarket_data$Profit)
+sd(supermarket_data$Profit)
+var(supermarket_data$Profit)
+library(moments)
+kurtosis(supermarket_data$Profit)
+# Factors present in the data 
+table(supermarket_data$Ship.Mode)
+table(supermarket_data$Region)
+table(supermarket_data$Category)
+# Visualization
+ggplot(data = supermarket_data,aes(Profit,fill=Region))+geom_histogram(bins=30)+ggtitle("distribution of profit based on the region")
+ggplot(data = supermarket_data,aes(Profit,fill=Category))+geom_histogram(bins=30)+ggtitle("distribution of profit based on the Category")
+ggplot(data = supermarket_data,aes(Profit,fill=Ship.Mode))+geom_histogram(bins=30)+ggtitle("distribution of profit based on the Ship.Mode")
+cor.test(supermarket_data$Quantity,supermarket_data$Sales)
+ggplot(data = supermarket_data,aes(Sales,Profit))+geom_point(col="red")+ggtitle("Relationship between sales and Profit")
+cor.test(supermarket_data$Profit,supermarket_data$Sales)
+ggplot(data = supermarket_data,aes(Quantity,Profit))+geom_point(col="red")+ggtitle("Relationship between Quantity and Profit")
+cor.test(supermarket_data$Profit,supermarket_data$Quantity)
+# Hypothesis Testing
+t.test(supermarket_data$Profit,supermarket_data$Sales)
+t.test(supermarket_data$Sales)
+```
+Modelling
+1. Regression Model
+Model to predict profit
+```{r}
+model<-lm(Profit~Sales+Quantity+Discount, data = supermarket_data)
+summary(model)
+library(forecast)
+checkresiduals(model)
+```
+
+
+
