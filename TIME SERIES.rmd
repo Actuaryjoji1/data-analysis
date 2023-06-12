@@ -1,0 +1,120 @@
+---
+title: "TIME SERIESTI"
+output:
+  word_document: default
+  html_document: default
+date: "2023-01-06"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(fpp3)
+library(feasts)
+library(forecast)
+```
+
+### Part 1
+Loading the required package into Rstudio
+```{r}
+
+# First 6 rows of our data set
+head(global_economy)
+
+# Selecting Vietnam, Uruguay, and Afghanistan countries.
+# Afghanistan 
+Afghanistan_data <-global_economy %>% filter(Country=="Afghanistan")
+ggplot(data = Afghanistan_data,aes(x=Year,y=GDP))+geom_line(col="purple")+ggtitle("GDP per capita over time for Afghanistan")
+#Uruguay
+Uruguay_data<- global_economy %>% filter(Country=="Uruguay")
+ggplot(data =Uruguay_data,aes(x=Year,y=GDP))+geom_line(col="green")+ggtitle("GDP per capita over time for Uruguay")
+#Uruguay
+# Vietnam
+Vietnam_data<-global_economy %>% filter(Country=="Vietnam")
+ggplot(data = na.omit(Vietnam_data),aes(x=Year,y=GDP))+geom_line(col="red")+ggtitle("GDP per capita over time for Vietnam")
+```
+
+Which has highest GDP per capita?
+```{r}
+options(scipen = 999)
+sum(Afghanistan_data$GDP,na.rm=T)
+sum(Uruguay_data$GDP,na.rm=T)
+sum(Vietnam_data$GDP,na.rm=T)
+# Based on the above results, Vietnam has the highest GDP.
+```
+Checking on the above plots, it is visible that GDP has increased over the years. 
+
+
+### PART 2.
+Use the canadian_gas data (monthly Canadian gas production in billions of cubic metres, January 1960 – February 2005).
+```{r}
+str(canadian_gas)
+# Canadian_gas data contains 542 observations of 2 variables.
+# Plot Volume using autoplot, gg_subseries, gg_season to look at the effect of changing seasonality over time
+autoplot(canadian_gas)+labs(title = "Autoplot of data")
+gg_subseries(canadian_gas)+ labs(title = "subseries of data")
+gg_season(canadian_gas) + labs(title = "gg_season of data")
+```
+Do an STL decomposition of the data. You will need to choose a seasonal window to allow for the changing shape of the seasonal component.
+```{r}
+decomposition<-stl(canadian_gas,s.window = "periodic")
+```
+How does seasonal shape change over time? [Hint: Try plotting the seasonal component using gg_season().]
+```{r}
+plot(decomposition,col="green")
+# Under the seasonal plot above, we can say that the data exhibits a seasonal pattern
+
+```
+
+Can you produce a plausible seasonally adjusted series?
+```{r}
+sas<-as.ts(canadian_gas,frequency = 4,start=1990,end=2025)
+dec_adjust<-decompose(sas,type="additive")
+adjusted_volume<-sas-dec_adjust$seasonal
+plot(adjusted_volume,col="green",main=" seasonally-adjusted series plot")
+#plausible seasonally adjusted series analyses trends by removing all the noises present.
+```
+
+
+
+### PART 3 
+Aus Retail Time Series
+We will use aus_rail dataset
+Using the code below, get a series (it gets a series randomly by using sample() function):
+```{r}
+set.seed(1234567)
+myseries <- aus_retail %>%
+  filter(`Series ID` == sample(aus_retail$`Series ID`,1)) 
+head(myseries)
+# remover NA's in the series with below:
+myseries =  myseries %>% filter(!is.na(`Series ID`)) 
+nrow(myseries)
+# rename the column name  `Series ID` with MyRandomSeries
+rename(myseries, MyRandomSeries = `Series ID`)
+```
+a) Run a linear regression of Turnover on its trend. Hint: use TSLM() and trend() functions)
+```{r}
+fit = myseries %>% model(TSLM(Turnover~ trend()))
+report(fit)
+# checking o the value of Multiple R-squared, it means that our model is 93.59 accurate
+```
+b) Forecast for next 3 years. What are the values for the next 3 years? Monthly values?
+```{r}
+x<-myseries$Turnover %>% forecast(h=36)
+x
+# In the table above Print Forecast column shows the forecasted values of the next 3 years
+```
+c) Plot the forecast values with original data
+```{r}
+ggplot(data = myseries,aes(Turnover,x$fitted))+geom_point(col="red")+geom_smooth(col="green")+ggtitle("forecast values Vs original data
+")
+```
+
+
+d) Get the residuals, does it satisfy requirements for white noise error terms. Hint: augment() and gg_tsresiduals() functions)
+```{r}
+checkresiduals(x,plot = T)
+# By checking the p-value and the plot above, the residuals satisfy the requirements for white noise error terms.
+```
+
+
