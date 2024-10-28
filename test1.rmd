@@ -1,0 +1,58 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+
+# Impoting the data set and loading neccesary packages.
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readxl)
+df<-read_excel("D:/Big_Data_Files.xlsx")
+# View the structure of the data frame
+str(df)
+df<-df[,-1]
+```
+
+
+
+# Sumary statistics
+```{r}
+
+# Distribution of crash type
+table(df$CrashType)
+# Distribution of Highway
+table(df$Highway)
+# Distribution of Day light
+table(df$Daylight)
+# Distribution of weather
+table(df$ClearWeather)
+# Distribution of Month
+table(df$Month)
+# Distribution of severity
+table(df$Severity)
+# Distribution of Weekday
+table(df$Weekday)
+
+summary(df)
+
+```
+
+
+# Graphical visualization
+```{r}
+# For quantitative variables (example: Severity)
+ggplot(df, aes(x = as.factor(Severity))) + geom_bar(fill="green") + labs(title = "Distribution of Severity", x = "Severity", y = "Frequency")
+ggplot(df, aes(x = as.factor(Weekday))) + geom_bar(fill="red") + labs(title = "Distribution of Weekday", x = "Weekday", y = "Frequency")
+ggplot(df, aes(x =ViolCat)) + geom_histogram(fill="Yellow",bins=10) + labs(title = "Distribution of ViolCat", x = "ViolCat", y = "Frequency")
+ggplot(df, aes(x = as.factor(ClearWeather))) + geom_bar(fill="grey") + labs(title = "Distribution of ClearWeather", x = "ClearWeather", y = "Frequency")
+ggplot(df, aes(x = as.factor(Month ))) + geom_bar(fill="red") + labs(title = "Distribution of Month ", x = "Month ", y = "Frequency")
+ggplot(df, aes(x = as.factor(CrashType))) + geom_bar(fill="pink") + labs(title = "Distribution of CrashType", x = "CrashType", y = "Frequency")
+ggplot(df, aes(x = as.factor(Highway))) + geom_bar(fill="purple") + labs(title = "Distribution of Highway", x = "Highway", y = "Frequency")
+ggplot(df, aes(x = as.factor(Daylight))) + geom_bar(fill="green") + labs(title = "Distribution of Daylight", x = "Daylight", y = "Frequency")
+ggplot(df, aes(x = as.factor(City ))) + geom_bar(fill="violet") + labs(title = "Distribution of City ", x = "City ", y = "Frequency")+ theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplot(df, aes(x = as.factor(County))) + geom_bar(fill="black") + labs(title = "Distribution of County", x = "County", y = "Frequency")+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+

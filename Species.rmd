@@ -1,0 +1,40 @@
+
+
+
+# Loading libraries
+```{r}
+# Load necessary libraries
+library(vegan)      # For PCoA
+library(ggplot2)    # For plotting
+library(FD)         # For functional diversity calculations
+library(dplyr)      # For data manipulation
+
+
+```
+
+
+# Importing the data sets
+```{r}
+abundance_per_site_28 <- read.csv("D:/abundance_per_site_28.csv")
+data.cov <- read.csv("D:/data.cov.csv")
+data.div <- read.csv("D:/data.div.csv")
+traits_sp_names <- read.csv("D:/traits_sp_names.csv")
+```
+
+
+# Merging the data sets
+```{r}
+# Ensure character class for merging
+abundance_per_site_28$site <- as.character(abundance_per_site_28$site)
+abundance_per_site_28 <- abundance_per_site_28%>% 
+  rename(SITE = site)
+data.cov$SITE <- as.character(data.cov$SITE)
+data.div$SITE <- as.character(data.div$SITE)
+# Merging data.cov with abundance_per_site_28
+merged_data <- merge(abundance_per_site_28, data.cov, by = "SITE")
+# Merging the result with data.div
+final_merged_data <- merge(merged_data, data.div, by = "SITE")
+```
+
+
+

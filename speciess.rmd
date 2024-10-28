@@ -1,0 +1,155 @@
+
+
+# Loading libraries
+```{r}
+# Load necessary libraries
+# Load necessary libraries
+library(vegan)      # For PCoA
+library(ggplot2)    # For plotting
+library(FD)         # For functional diversity calculations
+library(dplyr)      # For data manipulation
+library(mFD)        # For functional diversity analysis
+library(funspace)   # For functional space analysis
+
+```
+
+
+# Importing the data sets
+```{r}
+abundance_per_site_28 <- read.csv("D:/abundance_per_site_28.csv")
+data.cov <- read.csv("D:/data.cov.csv")
+data.div <- read.csv("D:/data.div.csv")
+traits_sp_names <- read.csv("D:/traits_sp_names.csv")
+```
+
+
+# Merging the data sets
+```{r}
+# Ensure character class for merging
+abundance_per_site_28$site <- as.character(abundance_per_site_28$site)
+abundance_per_site_28 <- abundance_per_site_28%>% 
+  rename(SITE = site)
+data.cov$SITE <- as.character(data.cov$SITE)
+data.div$SITE <- as.character(data.div$SITE)
+# Merging data.cov with abundance_per_site_28
+merged_data <- merge(abundance_per_site_28, data.cov, by = "SITE")
+# Merging the result with data.div
+final_merged_data <- merge(merged_data, data.div, by = "SITE")
+```
+
+
+
+```{r}
+# Load necessary library
+library(FactoMineR)
+# Convert character columns to factors
+traits_sp_names$Species <- as.factor(traits_sp_names$Species)
+traits_sp_names$Habitat <- as.factor(traits_sp_names$Habitat)
+traits_sp_names$Gen_diet <- as.factor(traits_sp_names$Gen_diet)
+traits_sp_names$Spec_diet <- as.factor(traits_sp_names$Spec_diet)
+traits_sp_names$Strata <- as.factor(traits_sp_names$Strata)
+# Convert factors to integer codes
+traits_sp_names$Habitat <- as.numeric(traits_sp_names$Habitat)
+traits_sp_names$Gen_diet <- as.numeric(traits_sp_names$Gen_diet)
+traits_sp_names$Spec_diet <- as.numeric(traits_sp_names$Spec_diet)
+traits_sp_names$Strata <- as.numeric(traits_sp_names$Strata)
+
+
+# Perform PCA
+pca_results <- PCA(traits_sp_names[, -(1)], scale.unit = TRUE, graph = FALSE)
+pca_results$eig
+# Assuming species names are in the first column of `traits_sp_names`
+pca_data <- data.frame(Species = traits_sp_names$Species, PC1 = pca_results$ind$coord[,1], PC2 = pca_results$ind$coord[,2])
+
+
+```
+
+
+
+```{r}
+library(ggplot2)
+
+# Basic PCA plot with points
+p <- ggplot(pca_data, aes(x = PC1, y = PC2)) +
+  geom_point(color = "red", size = 3) +  # Adjust color and size as needed
+  labs(x = paste("PC1 - Size (", round(pca_results$eig[1,2], 1), "%)", sep=""),
+       y = paste("PC2 - Dispersal Ability (", round(pca_results$eig[2,2], 1), "%)", sep="")) +
+  theme_minimal()
+
+p
+# Add labels using geom_text
+p <- p + geom_text(aes(label = Species), vjust = -1, hjust = 0.5, check_overlap = TRUE, size = 3)
+
+# Or add labels using geom_label for better readability
+p <- p + geom_label(aes(label = Species), vjust = -1, hjust = 0.5, fill = "white", label.size = 0.35, label.padding = unit(0.2, "lines"))
+
+# Optionally, add contour lines
+p <- p + stat_density_2d(aes(fill = ..level..), geom = "polygon", color = "black", alpha = 0.3, bins = 10)
+
+p<-p+ggtitle("Functional Trait Space of Bird Species Based on Dispersal Ability and Size")
+# Print the plot
+print(p)
+
+```
+
+
+
+```{r}
+ggplot(data=traits_sp_names, aes(x=Habitat, y=Mass,fill=Gen_diet))+ facet_wrap(~Gen_diet, nrow = 2, scales = 'free_y')+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+geom_boxplot()
+```
+
+
+
+
+# 1. Define Edge Species
+```{r}
+# Calculate the centroid of the PCA scores
+centroid <- colMeans(pca_data[, c("PC1", "PC2")])
+
+# Calculate the Euclidean distance of each species from the centroid
+pca_data$DistanceFromCentroid <- sqrt((pca_data$PC1 - centroid[1])^2 + (pca_data$PC2 - centroid[2])^2)
+
+# Define edge species as those in the top 10% of distances from the centroid
+threshold <- quantile(pca_data$DistanceFromCentroid, 0.9)
+edge_species <- pca_data[pca_data$DistanceFromCentroid >= threshold, "Species"]
+
+```
+
+# 2. Merge Species with patch characteristics
+```{r}
+edge_species_data <- traits_sp_names[traits_sp_names$Species %in% edge_species, ]
+edge_species_data<-cbind(edge_species_data,data.cov)
+```
+
+
+# 3. Analyze Patch Characteristics for Edge Species((those on the borders of the PCA plot)
+```{r}
+# Linear model to test the relationship between functional diversity and patch characteristics
+model <- lm(Fric ~ AREA + Forest_1km + CORE + Mosaic_1km, data = final_merged_data)
+summary(model)
+
+# Visualization
+ggplot(final_merged_data, aes(x = AREA, y = Fric)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Functional Richness vs. Patch Area", x = "Patch Area", y = "Functional Richness (Fric)") +
+  theme_minimal()
+```
+
+
+
+
+
+
+# Visualizatiion
+```{r}
+# Visualization for border species
+ggplot(final_merged_data, aes(x = AREA, y = Fric)) +
+  geom_point(color = "red") +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Functional Richness of Border Species vs. Patch Area", x = "Patch Area", y = "Functional Richness (Fric)") +
+  theme_minimal()
+
+```
+

@@ -1,0 +1,154 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Loading the data set and packges
+```{r}
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(cluster)
+library(factoextra)
+library(rpart)
+library(rpart.plot)
+library(e1071)
+library(nnet)
+library(class)
+library(ROCR)
+library(pROC)
+data <- read_excel("D:/data/data.xlsx")
+# Obtaining the structure of the data set
+str(data)
+# Summary statistics
+summary(data)
+
+# Check for missing values
+sum(is.na(data))
+# Handling missing values (Impute with median)
+data <- data %>% mutate(across(where(is.numeric), ~ifelse(is.na(.), median(., na.rm = TRUE), .)))
+# Convert necessary columns to categorical variables
+data$category <- as.factor(data$category)
+data$product_name<-as.factor(data$product_name)
+# Combine monthly sales into a total sales column
+data$total_sales <- rowSums(data[7:18])
+```
+
+
+2. Exploratory Data Analysis
+```{r}
+# Univariate Analysis: Price
+ggplot(data, aes(x = price)) + 
+  geom_histogram(binwidth = 50, fill = 'blue', color = 'black') + 
+  theme_minimal() + 
+  ggtitle("Price Distribution")
+
+# Univariate Analysis: Review Score
+ggplot(data, aes(x = review_score)) + 
+  geom_histogram(binwidth = 0.5, fill = 'green', color = 'black') + 
+  theme_minimal() + 
+  ggtitle("Review Score Distribution")
+
+# Correlation Matrix
+cor_matrix <- cor(data %>% select(price, review_score, review_count, total_sales))
+print(cor_matrix)
+heatmap(cor_matrix, symm = TRUE)
+
+# Pair plot
+pairs(data %>% select(price, review_score, review_count, total_sales))
+
+```
+
+
+3. Classification Methods: K-Nearest Neighbor/Decision Trees
+```{r}
+# Prepare data for classification
+set.seed(123)
+trainIndex <- createDataPartition(data$category, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+trainData <- data[trainIndex, ]
+testData  <- data[-trainIndex, ]
+
+# K-Nearest Neighbor
+knn_pred <- knn(train = trainData[,c('price', 'review_score', 'review_count')],
+                test = testData[,c('price', 'review_score', 'review_count')],
+                cl = trainData$category,
+                k = 5)
+
+# Confusion Matrix for KNN
+confusionMatrix(knn_pred, testData$category)
+
+# Decision Tree
+library(rpart)
+tree_model <- rpart(category ~ price + review_score + review_count, data = trainData)
+rpart.plot(tree_model)
+
+# Predict and evaluate decision tree
+tree_pred <- predict(tree_model, testData, type = "class")
+confusionMatrix(tree_pred, testData$category)
+
+# Neural Network
+set.seed(123)
+nn_model <- nnet(category ~ price + review_score + review_count, data = trainData, size = 5, maxit = 200)
+
+# Predict and evaluate neural network
+nn_pred <- predict(nn_model, testData, type = "class")
+confusionMatrix(as.factor(nn_pred), testData$category)
+
+```
+
+ 4. Classification Methods: Neural Network and Model Evaluation Techniques
+```{r}
+# Neural Network
+set.seed(123)
+nn_model <- nnet(category ~ price + review_score + review_count, data = trainData, size = 5, maxit = 200)
+
+# Predict and evaluate neural network
+nn_pred <- predict(nn_model, testData, type = "class")
+confusionMatrix(as.factor(nn_pred), testData$category)
+
+
+```
+
+
+5. Clustering Methods: Hierarchical and K-means
+```{r}
+# Hierarchical Clustering
+dist_matrix <- dist(scale(data[,c('price', 'review_score', 'review_count')]))
+hclust_model <- hclust(dist_matrix, method = "ward.D2")
+
+# Plot dendrogram
+plot(hclust_model)
+rect.hclust(hclust_model, k = 4, border = 2:5)
+
+# K-means Clustering
+set.seed(123)
+kmeans_model <- kmeans(scale(data[,c('price', 'review_score', 'review_count')]), centers = 4)
+
+# Plot K-means clusters
+fviz_cluster(kmeans_model, data = scale(data[,c('price', 'review_score', 'review_count')]))
+
+```
+
+6. Clustering Methods: Kohonen Networks / Measuring Goodness
+```{r}
+# Kohonen Networks using the `kohonen` package
+library(kohonen)
+
+# Prepare data for SOM
+som_grid <- somgrid(xdim = 5, ydim = 5, topo = "hexagonal")
+som_model <- som(scale(data[,c('price', 'review_score', 'review_count')]), grid = som_grid, rlen = 100)
+
+# Plot SOM
+plot(som_model, type = "codes")
+plot(som_model, type = "mapping")
+
+# Measuring goodness (e.g., Silhouette Score for K-means)
+sil_score <- silhouette(kmeans_model$cluster, dist(scale(data[,c('price', 'review_score', 'review_count')])))
+plot(sil_score)
+
+```
+

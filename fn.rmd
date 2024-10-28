@@ -1,0 +1,119 @@
+---
+title: 'Case Study: Emergency Room'
+author: "Serah Ngugi"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+# Importing the data
+```{r}
+library(simmer)
+library(dplyr)
+patient_data<- read.csv("D:/Case5_emergency-room.csv")
+str(patient_data)
+```
+
+
+
+
+```{r}
+
+library(simmer)
+library(simmer)
+
+set.seed(123)
+# Initialize the simulation environment
+env <- simmer("Emergency Room")
+
+
+# Define resources
+env <- add_resource(env, "doctor", capacity=2)
+
+
+# Define the trajectories
+
+# NIA patients with higher initial priority
+nia_trajectory <- trajectory("NIA Treatment") %>%
+  seize("doctor", 1, priority=3) %>%  # Higher priority for initial treatment
+  timeout(function() rnorm(1, mean=40, sd=30)) %>%  # Treatment duration
+  release("doctor") %>%
+  set_attribute("priority", 2) %>%  # Reduce priority after initial treatment
+  seize("doctor", 1, priority= ~get_attribute(env, "priority")) %>%
+  timeout(function() rnorm(1, mean=30, sd=20)) %>%  # Further treatment duration
+  release("doctor")
+
+# CW patients with constant lower priority
+cw_trajectory <- trajectory("CW Treatment") %>%
+  seize("doctor", 1, priority=1) %>%  # Constant priority for all treatments
+  timeout(function() rnorm(1, mean=15, sd=10)) %>% 
+  release("doctor") %>%
+  seize("doctor", 1, priority=2) %>%  # Increase priority for follow-up treatment
+  timeout(function() rnorm(1, mean=10, sd=5)) %>% 
+  release("doctor")
+
+# Define patient arrivals using external data for interarrival times
+# Assume patient_data is loaded with 'interArrival' and 'type' columns
+for (i in seq_along(patient_data$interArrival)) {
+  arrival_time <- sum(patient_data$interArrival[1:i])
+  if (patient_data$type[i] == "NIA") {
+    env %>% add_generator(paste("NIA Patient", i), nia_trajectory, at(arrival_time), priority=3)
+  } else {
+    env %>% add_generator(paste("CW Patient", i), cw_trajectory, at(arrival_time), priority=1)
+  }
+}
+
+# Run the simulation
+env <- run(env, until=28800)  # 20 days in minutes
+
+
+```
+
+## Part a
+1. Analyzing Results and Suggestions for Reducing Waiting Time
+Current Analysis:
+From the partial output provided, we can see the start, end, and activity times for patients. The difference between start and end times gives us an idea about the total flow time for each patient.
+The end times being significantly higher than the activity times suggest there is waiting time involved which isn't shown explicitly in this output. This can be inferred from the difference between successive patient's end and start times.
+
+
+Suggestions:
+Implement a triage system: This could help by more accurately assessing patient needs upon arrival and adjusting priorities dynamically.
+Resource Flexibility: Consider adding more doctors during peak times if the budget allows, or having a flexible staff schedule that adapts based on historical patient load data.
+Optimize the Scheduling Algorithm: Using a more sophisticated scheduling algorithm might help reduce wait times, especially during periods when multiple patients are queued.
+Fast Track for Minor Issues: Introducing a fast-track process for CW patients with minor issues could significantly reduce their waiting and treatment time, freeing up resources for more critical cases
+
+
+# Average Flow-Time for NIA and CW Patients
+```{r}
+set.seed(123)
+# Calculate average flow time
+results <- get_mon_arrivals(env)
+nia_times <- results[grepl("NIA", results$name),]
+cw_times <- results[grepl("CW", results$name),]
+
+avg_flow_time_nia <- mean(nia_times$end_time - nia_times$start_time)
+avg_flow_time_cw <- mean(cw_times$end_time - cw_times$start_time)
+
+avg_flow_time_nia
+avg_flow_time_cw
+
+```
+# Discussing the Utilization of Doctors
+```{r}
+resource_stats <- get_mon_resources(env)
+total_time <- 28800  # Total minutes in 20 days
+doctor_stats <- resource_stats[resource_stats$resource == "doctor", ]
+# Calculate the busy time intervals
+doctor_stats$next_time <- lead(doctor_stats$time, default = total_time)
+doctor_stats$busy_time_interval <- ifelse(doctor_stats$server > 0, doctor_stats$next_time - doctor_stats$time, 0)
+# Sum the busy time intervals
+total_busy_time <- sum(doctor_stats$busy_time_interval)
+# Calculate utilization
+utilization_percentage <- (total_busy_time / total_time) * 100
+
+# Print the utilization percentage
+utilization_percentage
+
+```
+The utilization percentage computed for the doctors, 6.012871, suggests that over the 20-day period of the simulation, the doctors were actively treating patients only about 6% of the time. 

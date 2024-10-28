@@ -1,0 +1,47 @@
+
+
+```{r}
+library(simmer)
+
+# Create the simulation environment
+env <- simmer("ER_Simulation")
+
+# Define resources
+env <- add_resource(env, "doctor", capacity = 2, preemptive = TRUE)
+
+# Define patient trajectories
+nia_trajectory <- trajectory("NIA_process") %>%
+  seize("doctor", 1) %>%
+  timeout(function() rnorm(1, 40, 30)) %>%
+  release("doctor") %>%
+  seize("doctor", 1, priority = 2) %>%
+  timeout(function() rnorm(1, 30, 20)) %>%
+  release("doctor")
+
+cw_trajectory <- trajectory("CW_process") %>%
+  seize("doctor", 1, priority = 1) %>%
+  timeout(function() rnorm(1, 15, 10)) %>%
+  release("doctor") %>%
+  seize("doctor", 1, priority = 2) %>%
+  timeout(function() rnorm(1, 10, 5)) %>%
+  release("doctor")
+
+# Patient arrival process
+patient_arrival <- trajectory("patient_arrival") %>%
+  branch(function() runif(1) < 0.3, # Assuming 30% are NIA; adjust as necessary
+         TRUE,
+         nia_trajectory,
+         cw_trajectory)
+
+# Add generators to the simulation environment
+env %>%
+  add_generator("NIA_patient", patient_arrival, function() rexp(1, 1/10)) %>%
+  add_generator("CW_patient", patient_arrival, function() rexp(1, 1/15))
+
+# Run the simulation for 480 hours (20 days * 24 hours)
+env %>%
+  run(until = 480 * 60)
+
+
+```
+

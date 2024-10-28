@@ -1,0 +1,385 @@
+---
+title: "Homework 5"
+author: "Serah Ngugi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+
+# Problem 1:  Phone Call System Simulation
+
+```{r}
+# Load required packages
+library(queueing)
+library(triangle)
+library(ggplot2)
+library(dplyr)
+# Set simulation parameters
+set.seed(123)  # Ensure reproducibility
+n_replications <- 50
+simulation_time <- 6 * 60  # 6 hours in minutes
+arrival_rate <- 1 / 14  # Mean arrival time is 14 minutes
+# Define a function to generate service times
+get_service_time <- function(n) {
+  rtriangle(n, a = 5, b = 20, c = 10)  # Triangular distribution parameters
+}
+
+# Simulation function for both scenarios
+simulate_scenario <- function(scenario) {
+  wait_times <- numeric(n_replications)
+  
+  for (i in 1:n_replications) {
+    if (scenario == "A") {
+      # Single queue, two operators
+      env <- queueing::NewInput.MM1(lambda = arrival_rate, mu = 1 / mean(get_service_time(1000)), n = 2)
+      res <- queueing::QueueingModel(env)
+      wait_times[i] <- queueing::Wq(res)
+    } else {
+      # Two queues, each with one operator, random assignment
+      service_times <- get_service_time(1000)
+      env1 <- queueing::NewInput.MM1(lambda = arrival_rate / 2, mu = 1 / mean(service_times), n = 1)
+      env2 <- queueing::NewInput.MM1(lambda = arrival_rate / 2, mu = 1 / mean(service_times), n = 1)
+      res1 <- queueing::QueueingModel(env1)
+      res2 <- queueing::QueueingModel(env2)
+      if (runif(1) < 0.5) {
+        wait_times[i] <- queueing::Wq(res1)
+      } else {
+        wait_times[i] <- queueing::Wq(res2)
+      }
+    }
+  }
+  
+  data.frame(wait_times = wait_times, scenario = rep(scenario, n_replications))
+}
+
+# Run simulations for both scenarios
+results_a <- simulate_scenario("A")
+results_b <- simulate_scenario("B")
+results <- rbind(results_a, results_b)
+
+# Calculate mean waiting times for each scenario
+mean_a <- mean(results_a$wait_times)
+mean_b <- mean(results_b$wait_times)
+
+# Print the results
+print(paste("Mean waiting time for Scenario A:", mean_a))
+print(paste("Mean waiting time for Scenario B:", mean_b))
+
+# Plot histograms using ggplot2
+ggplot(results, aes(x = wait_times, fill = scenario)) +
+  geom_histogram(binwidth = 1, alpha = 0.6, position = "dodge") +
+  labs(title = "Comparison of Waiting Times by Scenario",
+       x = "Waiting Time (minutes)",
+       y = "Frequency") +
+  facet_wrap(~ scenario) +
+  theme_minimal()
+
+```
+Scenario A: The mean waiting time is approximately 57.49 minutes.
+Scenario B: The mean waiting time is approximately 8.36 minutes.
+The histogram reveals that Scenario A has a spread-out distribution of waiting times with multiple values, while Scenario B has a concentrated distribution around a single value, suggesting a lower average waiting time and more consistency in waiting times, which is crucial for service predictability and operational efficiency.
+
+
+
+
+
+
+
+# Problem 2: 
+
+
+
+```{r}
+# Load necessary library
+library(data.table)
+# Define simulation parameters
+mean_interarrival_time <- 5
+simulation_time <- 360  # 6 hours in minutes
+num_replications <- 50
+
+# Service time generator functions for each operator
+service_time_operator1 <- function() {
+  runif(1, 5, 20)
+}
+
+service_time_operator2 <- function() {
+  runif(1, 5, 20)
+}
+
+service_time_operator3 <- function() {
+  rnorm(1, 15, 3)
+}
+
+# Run simulation
+run_simulation <- function() {
+  # Generate interarrival times
+  interarrival_times <- rexp(ceiling(simulation_time / mean_interarrival_time), rate = 1 / mean_interarrival_time)
+  arrival_times <- cumsum(interarrival_times)
+  arrival_times <- arrival_times[arrival_times <= simulation_time]
+  
+  # Initialize statistics
+  utilizations <- list(operator1 = numeric(), operator2 = numeric(), operator3 = numeric())
+  waiting_times <- list(operator1 = numeric(), operator2 = numeric(), operator3 = numeric())
+
+  for (op in 1:3) {
+    last_service_end_time <- 0
+    for (arrival_time in arrival_times) {
+      service_time <- switch(
+        op,
+        service_time_operator1(),
+        service_time_operator2(),
+        service_time_operator3()
+      )
+      start_service_time <- max(last_service_end_time, arrival_time)
+      finish_service_time <- start_service_time + service_time
+      waiting_times[[op]] <- c(waiting_times[[op]], start_service_time - arrival_time)
+      last_service_end_time <- finish_service_time
+      if (finish_service_time <= simulation_time) {
+        utilizations[[op]] <- c(utilizations[[op]], service_time)
+      }
+    }
+  }
+  
+  # Calculate averages
+  avg_utilizations <- sapply(utilizations, function(u) sum(u) / simulation_time)
+  avg_waiting_times <- sapply(waiting_times, mean)
+  waiting_time_conf_intervals <- sapply(waiting_times, function(w) {
+    quantile(w, c(0.025, 0.975))
+  })
+  
+  return(list(utilizations = avg_utilizations, waiting_times = avg_waiting_times, conf_intervals = waiting_time_conf_intervals))
+}
+
+# Perform replications
+results <- replicate(num_replications, run_simulation(), simplify = FALSE)
+
+# Calculate final averages across replications
+final_utilizations <- sapply(results, function(r) r$utilizations)
+final_waiting_times <- sapply(results, function(r) r$waiting_times)
+final_conf_intervals <- sapply(results, function(r) r$conf_intervals)
+
+operators <- c("Operator1", "Operator2", "Operator3")
+utilization_data <- as.data.frame(final_utilizations)
+colnames(utilization_data) <- paste("Replication", 1:ncol(utilization_data), sep="")
+# Adding a row identifier for operators
+utilization_data$Operator <- operators
+# Melting the data to long format
+library(reshape2)
+utilization_long <- melt(utilization_data, id.vars = "Operator", variable.name = "Replication", value.name = "Utilization")
+# Removing any NAs if present
+utilization_long <- na.omit(utilization_long)
+# View the cleaned data
+print(head(utilization_long))
+ggplot(utilization_long, aes(x = Utilization, fill = Operator)) +
+  geom_histogram(bins = 10, alpha = 0.75, color="black") +
+  facet_wrap(~ Operator, scales = "free_y") +
+  labs(title = "Utilization Histograms for Each Operator", x = "Utilization (%)", y = "Frequency") +
+  theme_minimal()
+###
+rownames(final_waiting_times) <- c("Operator1", "Operator2", "Operator3")
+
+# Convert the matrix to a data frame
+waiting_times_data <- as.data.frame(final_waiting_times)
+
+# Add an identifier column for operators
+waiting_times_data$Operator <- rownames(final_waiting_times)
+
+waiting_times_long <- melt(waiting_times_data, id.vars = "Operator", variable.name = "Replication", value.name = "Waiting_Time")
+ggplot(waiting_times_long, aes(x = Waiting_Time, fill = Operator)) +
+  geom_histogram(bins = 10, alpha = 0.75, color="black") +
+  facet_wrap(~ Operator, scales = "free_y") +
+  labs(title = "Waiting Time Histograms for Each Operator", x = "Waiting Time (minutes)", y = "Frequency") +
+  theme_minimal()
+
+
+summary_stats <- waiting_times_long %>% 
+  group_by(Operator) %>%
+  summarise(
+    mean_waiting_time = mean(Waiting_Time),
+    sd_waiting_time = sd(Waiting_Time),
+    n = n()
+  )
+
+# Calculate 95% Confidence Intervals
+summary_stats <- summary_stats %>%
+  mutate(
+    lower_ci = mean_waiting_time - 1.96 * (sd_waiting_time / sqrt(n)),
+    upper_ci = mean_waiting_time + 1.96 * (sd_waiting_time / sqrt(n))
+  )
+
+# Print the results
+print(summary_stats)
+```
+
+The utilization distribution of Operator 1 is below 90%, indicating a lighter workload. Operator 2 has a narrower distribution with a peak utilization around 95%, suggesting a steady flow of work. Operator 3 is tightly distributed around 100%, suggesting efficient use of time but also risk of overwork or insufficient capacity. This suggests a need for workload rebalance or task distribution. High utilization of Operator 3 could lead to bottlenecks, increased burnout, and decreased job satisfaction. Operator 1's lower utilization rates may indicate capacity for more work or retraining.
+
+
+
+# Problem 3: 
+```{r}
+library(truncnorm)
+
+# Simulation parameters
+simulation_time <- 2000
+num_replications <- 50
+
+# Define part arrival and service parameters
+min_interarrival <- 0.5
+mean_interarrival <- 4
+std_interarrival <- 2
+setup_time <- c(1, 1.5)  # Setup times for Type 1 and Type 2 parts
+service_means <- c(4.5, 7.5)  # Service means for Type 1 and Type 2 parts
+service_sds <- c(1, 1.5)  # Service standard deviations for Type 1 and Type 2 parts
+
+# Function to simulate one run
+simulate_one_run <- function() {
+  clock <- 0
+  last_departure_times <- c(0, 0)
+  usage_times <- c(0, 0)
+  flow_times <- list(numeric(), numeric())
+  waiting_times <- list(numeric(), numeric())
+
+  while (clock < simulation_time) {
+    part_type <- ifelse(runif(1) < 0.6, 1, 2)
+    interarrival <- rtruncnorm(1, a = (min_interarrival - mean_interarrival) / std_interarrival, mean = mean_interarrival, sd = std_interarrival)
+    arrival_time <- clock + interarrival
+    if (arrival_time > simulation_time) break
+
+    setup_duration <- setup_time[part_type]
+    service_duration <- rnorm(1, mean = service_means[part_type], sd = service_sds[part_type])
+    start_service_time <- max(last_departure_times[part_type], arrival_time) + setup_duration
+    departure_time <- start_service_time + service_duration
+
+    if (departure_time <= simulation_time) {
+      usage_times[part_type] <- usage_times[part_type] + (departure_time - arrival_time)
+      flow_times[[part_type]] <- c(flow_times[[part_type]], departure_time - arrival_time)
+      waiting_times[[part_type]] <- c(waiting_times[[part_type]], start_service_time - arrival_time - setup_duration)
+    }
+    last_departure_times[part_type] <- departure_time
+    clock <- arrival_time
+  }
+  
+  utilization <- usage_times / simulation_time
+  avg_flow_time <- sapply(flow_times, mean)
+  avg_waiting_time <- sapply(waiting_times, mean)
+  
+  list(utilization = utilization, flow_time = avg_flow_time, waiting_time = avg_waiting_time)
+}
+
+# Run simulation for multiple replications
+results <- replicate(num_replications, simulate_one_run(), simplify = FALSE)
+
+# Aggregate results
+final_utilization <- sapply(results, function(x) x$utilization, simplify = TRUE)
+final_flow_time <- sapply(results, function(x) x$flow_time, simplify = TRUE)
+final_waiting_time <- sapply(results, function(x) x$waiting_time, simplify = TRUE)
+
+# Compute average results across all replications
+avg_utilization <- colMeans(final_utilization, na.rm = TRUE)
+avg_flow_time <- colMeans(final_flow_time, na.rm = TRUE)
+avg_waiting_time <- colMeans(final_waiting_time, na.rm = TRUE)
+
+ #Prepare data frames from the vectors for plotting
+utilization_df <- data.frame(Machine = rep(c("Machine 1", "Machine 2"), each = 50), Utilization = c(final_utilization[1,], final_utilization[2,]))
+flow_time_df <- data.frame(Machine = rep(c("Machine 1", "Machine 2"), each = 50), FlowTime = c(final_flow_time[1,], final_flow_time[2,]))
+waiting_time_df <- data.frame(Machine = rep(c("Machine 1", "Machine 2"), each = 50), WaitingTime = c(final_waiting_time[1,], final_waiting_time[2,]))
+
+# Plot Utilization
+ggplot(utilization_df, aes(x = Machine, y = Utilization, fill = Machine)) +
+  geom_boxplot() +
+  labs(title = "Utilization of Each Machine", y = "Utilization (%)", x = "") +
+  theme_minimal()
+
+# Plot Flow Time
+ggplot(flow_time_df, aes(x = Machine, y = FlowTime, fill = Machine)) +
+  geom_boxplot() +
+  labs(title = "Average Flow Time for Each Machine Type", y = "Flow Time (minutes)", x = "") +
+  theme_minimal()
+
+# Plot Waiting Time
+ggplot(waiting_time_df, aes(x = Machine, y = WaitingTime, fill = Machine)) +
+  geom_boxplot() +
+  labs(title = "Average Waiting Time for Each Machine Type", y = "Waiting Time (minutes)", x = "") +
+  theme_minimal()
+
+# Calculate average flow time for each type of part
+average_flow_time_type_1 <- mean(final_flow_time[1,], na.rm = TRUE)
+average_flow_time_type_1
+average_flow_time_type_2 <- mean(final_flow_time[2,], na.rm = TRUE)
+average_flow_time_type_2
+
+```
+
+Machine 1 shows lower utilization compared to Machine 2, indicating more intensive use. Machine 2 has greater variability in its use, with outliers suggesting occasional high utilization. Machine 1 parts have lower average flow time, suggesting efficiency or less complex parts. Machine 2 has substantial variability and outliers, suggesting high congestion or processing delays. Machine 2 is a bottleneck, with higher utilization, flow time, and waiting time. To improve efficiency, a detailed analysis of Machine 2 processes, scheduling of part types, and preventative maintenance schedules could be implemented. Cross-training operators could also create a more flexible workforce.
+
+# Problem 4
+```{r}
+library(data.table)
+library(triangle)  # For triangular distribution
+set.seed(123)  # For reproducibility
+simulate_uc_day <- function() {
+  patients <- data.table(
+    id = integer(),
+    arrival_time = numeric(),
+    priority = character(),
+    triage_end_time = numeric(),
+    start_service_time = numeric(),
+    end_service_time = numeric(),
+    balked = logical()
+  )
+  
+  time <- 0
+  queue <- list()
+  patient_id <- 0
+  
+  while(time < 480) {  # Simulate 8 hours (480 minutes)
+    interarrival <- rexp(1, rate = 1/6)
+    time <- time + interarrival
+    
+    if (length(queue) >= 10) {
+      next  # Skip generating new patient if queue length exceeds 10
+    }
+    
+    patient_id <- patient_id + 1
+    priority <- ifelse(runif(1) < 0.25, "High", "Low")
+    triage_time <- rtriangle(1, 3, 10, 5)
+    triage_end_time <- time + triage_time
+    queue <- append(queue, list(list(id = patient_id, time = triage_end_time, priority = priority)))
+    
+    # Process queue
+    if (length(queue) > 0) {
+      current_patient <- queue[[1]]
+      queue <- queue[-1]
+      
+      if (current_patient$priority == "High") {
+        service_time <- rnorm(1, mean = 40, sd = 5)
+      } else {
+        service_time <- rgamma(1, shape = 15, rate = 1)
+        waiting_limit <- runif(1, 15, 25)
+        if (time - current_patient$time > waiting_limit) {
+          patients <- rbind(patients, list(current_patient$id, current_patient$time, current_patient$priority, current_patient$time, NA, NA, TRUE))
+          next
+        }
+      }
+      start_service_time <- current_patient$time
+      end_service_time <- start_service_time + service_time
+      patients <- rbind(patients, list(current_patient$id, current_patient$time - triage_time, current_patient$priority, current_patient$time, start_service_time, end_service_time, FALSE))
+    }
+  }
+  # Calculate results
+  results <- patients[, .(
+    avg_flow_time = mean(end_service_time - arrival_time, na.rm = TRUE),
+    balk_rate = mean(balked, na.rm = TRUE)
+  ), by = priority]
+  return(results)
+}
+# Simulate for 50 days
+results_list <- replicate(50, simulate_uc_day(), simplify = FALSE)
+final_results <- rbindlist(results_list, use.names = TRUE, idcol = "replication")
+final_avg <- final_results[, .(avg_flow_time = mean(avg_flow_time), balk_rate = mean(balk_rate)), by = priority]
+
+print(final_avg)
+
+```
+
+
